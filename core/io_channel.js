@@ -11,7 +11,7 @@ define(function(require, exports, module){
 		// | Node.JS Path
 		// \____________________________________________/
 		module.exports = function(url){
-			var ch = {}
+			var ch = {};
 
 			var pr // poll request
 			var pt // poll timer
@@ -27,39 +27,39 @@ define(function(require, exports, module){
 			}
 
 			function endPoll(c, d){ // end poll http status code, data
-				if(!pr) return
+				if(!pr) { return; }
 				pr.writeHead(c, nc)
 				pr.end(d)
 				pr = null
 			}
 
 			ch.handler = function(req, res){
-				if(req.url != url) return
+				if(req.url != url) { return; }
 				if(req.method == 'GET'){ // Long poll
 					endPoll(304)
 					if(pt) clearInterval(pt), pt = 0
 					pt = setInterval(function(){endPoll(304)}, 30000)
 					pr = res
 					if(sd.length) endPoll(200, '['+sd.join(',')+']'), sd.length = 0 // we have pending data
-					return 1
+					return 1;
 				}
 
 				if(req.method == 'PUT'){ // RPC call
 					var d = ''
 					req.on('data', function(i){ d += i.toString() })
 					req.on('end', function(){
-						if(!ch.rpc) return res.end()
+						if(!ch.rpc) { return res.end(); }
 						d = parse(d)
-						if(!d) return res.end()
+						if(!d) { return res.end(); }
 						ch.rpc(d, function(r){
 							res.writeHead(200, nc)
 							res.end(JSON.stringify(r))
 						})
 					})
-					return 1
+					return 1;
 				}
 
-				if(req.method == 'POST'){ // Message  
+				if(req.method == 'POST'){ // Message
 					var d = ''
 					req.on('data', function(i){ d += i.toString() })
 					req.on('end', function(){
@@ -68,12 +68,12 @@ define(function(require, exports, module){
 						d = parse(d)
 						if(ch.data && d && d.length) for(var i = 0;i<d.length;i++) ch.data(d[i])
 					})
-					return 1
+					return 1;
 				}
 			}
 
 			ch.upgrade = function(req, sock, head){
-				if(req.headers['sec-websocket-version'] != 13) return sock.destroy()
+				if(req.headers['sec-websocket-version'] != 13) { return sock.destroy(); }
 				wsClose()
 				ws = sock
 
@@ -109,67 +109,114 @@ define(function(require, exports, module){
 				function head(){
 					var se = e
 					while(e > 0 && r < i.length && w < h.length) h[w++] = i[r++], e--
-					if(w > h.length) return err("unexpected data in header"+ se + s.toString())
-					return e != 0
+					if(w > h.length) { return err("unexpected data in header"+ se + s.toString()); }
+					return e != 0;
 				}
 
 				function data(){
 					while(e > 0 && r < i.length) o[w++] = i[r++] ^ h[m + (c++&3)], e--
-					if(e) return 
+					if(e) { return; }
 					var d = parse(o.toString('utf8', 0, w))
 					if(ch.data && d && d.length) {
 						for(var j = 0;j<d.length;j++) ch.data(d[j])
 					}
-					return e = 1, w = 0, s = opcode
+					e = 1;
+					w = 0;
+					s = opcode;
+					return s;
 				}
 
 				function mask(){
-					if(head()) return
-					if(!l) return e = 1, w = 0, s = opcode
+					if(head()) { return; }
+					if(!l) {
+						e = 1;
+						w = 0;
+						s = opcode;
+						return s;
+					}
 					m = w - 4
 					w = c = 0
 					e = l
-					if(l > max) return err("buffer size request too large "+l+" > "+max)
+					if(l > max) { return err("buffer size request too large "+l+" > "+max); }
 					if(l > o.length) o = new Buffer(l)
-					return s = data
+					return s = data;
 				}
 
 				function len8(){
-					if(head()) return
-					return l = h.readUInt32BE(w - 4), e = 4, s = mask
+					if(head()) { return; }
+					l = h.readUInt32BE(w - 4);
+					e = 4;
+					s = mask;
+					return s;
 				}
 
 				function len2(){
-					if(head()) return 
-					return l = h.readUInt16BE(w - 2), e = 4, s = mask
+					if(head()) { return; }
+					l = h.readUInt16BE(w - 2);
+					e = 4;
+					s = mask;
+					return s;
 				}
 
 				function len1(){
-					if(head()) return
-					if(!(h[w  - 1] & 128)) return err("only masked data")
+					if(head()) { return; }
+					if(!(h[w  - 1] & 128)){  return err("only masked data"); }
 					var t = h[w - 1] & 127
-					if(t < 126) return l = t, e = 4, s = mask
-					if(t == 126) return e = 2, s = len2
-					if(t == 127) return e = 8, s = len8
+					if(t < 126) {
+						l = t;
+						e = 4;
+						s = mask;
+						return s;
+					}
+					if(t == 126) {
+						e = 2;
+						s = len2;
+						return s;
+					}
+					if(t == 127) {
+						e = 8;
+						s = len8;
+						return s;
+					}
 				}
 
 				function pong(){
-					if(head()) return
-					if(h[w-1] & 128) return e = 4, l = 0, s = mask 
-					return e = 1, w = 0, s = opcode
+					if(head()) {return; }
+					if(h[w-1] & 128) {
+						e = 4;
+						l = 0;
+						s = mask;
+						return s;
+					}
+					e = 1;
+					w = 0;
+					s = opcode;
+					return s;
 				}
 
 				function opcode(){
-					if(head()) return
+					if(head()) {
+						return;
+					}
 					var f = h[0] & 128
 					var t = h[0] & 15
 					if(t == 1){
-						if(!f) return err("only final frames supported")
-						return e = 1, s = len1
+						if(!f) {
+							return err("only final frames supported");
+						}
+						e = 1;
+						s = len1;
+						return s;
 					}
-					if(t == 8) return wsClose()
-					if(t == 10) return e = 1, s = pong
-					return err("opcode not supported " + t)
+					if(t == 8) {
+						return wsClose();
+					}
+					if(t == 10) {
+						e = 1;
+						s = pong;
+						return s;
+					}
+					return err("opcode not supported " + t);
 				}
 
 				ws.on('data', function(d){
@@ -224,15 +271,15 @@ define(function(require, exports, module){
 				}, 0)
 			}
 
-			return ch
+			return ch;
 		}
 
-		return
+		return;
 	}
 	// | Browser Path
 	// \____________________________________________/
 
-	module.exports = 
+	module.exports =
 	//CHANNEL
 	function(url){
 		var ch = {}
@@ -251,7 +298,7 @@ define(function(require, exports, module){
 			sd.length = 0
 			sx = new XMLHttpRequest()
 			sx.onreadystatechange = function(){
-				if(sx.readyState != 4) return
+				if(sx.readyState != 4) { return; }
 				sx = 0
 				if(sd.length > 0) xsend()
 			}
@@ -267,7 +314,7 @@ define(function(require, exports, module){
 						wsFlush()
 					},50)
 				}
-				return
+				return;
 			} else if (!ws){
 				if(!ws) console.log('Websocket flooded, trace data lost')
 			}
@@ -296,14 +343,14 @@ define(function(require, exports, module){
 					wsFlush()
 				},0)
 			} else {
-				if(!sx) return xsend()
+				if(!sx) { return xsend(); }
 			}
 		}
 
 		function poll(){
 			var x = new XMLHttpRequest()
 			x.onreadystatechange = function(){
-				if(x.readyState != 4) return
+				if(x.readyState != 4) { return }
 				if(x.status == 200 || x.status == 304) poll()
 				else setTimeout(poll, 500)
 				try{ var d = JSON.parse(x.responseText) }catch(e){}
@@ -316,14 +363,14 @@ define(function(require, exports, module){
 		ch.rpc = function(m, cb){ // rpc request
 			var x = new XMLHttpRequest()
 			x.onreadystatechange = function(){
-				if(x.readyState != 4) return
+				if(x.readyState != 4) { return; }
 				var d
 				if(x.status == 200 ) try{d = JSON.parse(x.responseText) }catch(e){}
 				if(cb) cb(d)
 			}
 			x.open('PUT', url)
 			x.send(JSON.stringify(m))
-			return x
+			return x;
 		}
 
 		function websock(){
@@ -348,11 +395,11 @@ define(function(require, exports, module){
 				if(d && ch.data) for(var i = 0;i<d.length;i++) ch.data(d[i])
 			}
 		}
-		
+
 		if(typeof no_websockets !== "undefined" || typeof WebSocket === "undefined") poll()
 		else websock()
 		//poll()
-		return ch
+		return ch;
 	}
 
 	function parse(d){ // data
