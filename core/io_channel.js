@@ -22,8 +22,8 @@ define(function(require, exports, module){
 			var st // send timeout
 
 			function wsClose(){
-				if(ws) ws.destroy(), ws = 0
-				if(wk) clearInterval(wk), wk = 0
+				if(ws) { ws.destroy(); ws = 0; }
+				if(wk){  clearInterval(wk); wk = 0; }
 			}
 
 			function endPoll(c, d){ // end poll http status code, data
@@ -37,10 +37,14 @@ define(function(require, exports, module){
 				if(req.url != url) { return; }
 				if(req.method == 'GET'){ // Long poll
 					endPoll(304)
-					if(pt) clearInterval(pt), pt = 0
+					if(pt) { clearInterval(pt); pt = 0 }
 					pt = setInterval(function(){endPoll(304)}, 30000)
 					pr = res
-					if(sd.length) endPoll(200, '['+sd.join(',')+']'), sd.length = 0 // we have pending data
+					if(sd.length) {
+						// we have pending data
+						endPoll(200, '['+sd.join(',')+']');
+						sd.length = 0;
+					}
 					return 1;
 				}
 
@@ -66,7 +70,11 @@ define(function(require, exports, module){
 						res.writeHead(204, nc)
 						res.end()
 						d = parse(d)
-						if(ch.data && d && d.length) for(var i = 0;i<d.length;i++) ch.data(d[i])
+						if(ch.data && d && d.length) {
+							for(var i = 0;i<d.length;i++) {
+								ch.data(d[i]);
+							}
+						}
 					})
 					return 1;
 				}
@@ -108,17 +116,25 @@ define(function(require, exports, module){
 
 				function head(){
 					var se = e
-					while(e > 0 && r < i.length && w < h.length) h[w++] = i[r++], e--
+					while(e > 0 && r < i.length && w < h.length) {
+						h[w++] = i[r++];
+						e--;
+					}
 					if(w > h.length) { return err("unexpected data in header"+ se + s.toString()); }
 					return e != 0;
 				}
 
 				function data(){
-					while(e > 0 && r < i.length) o[w++] = i[r++] ^ h[m + (c++&3)], e--
+					while(e > 0 && r < i.length) {
+						o[w++] = i[r++] ^ h[m + (c++&3)];
+						e--;
+					}
 					if(e) { return; }
 					var d = parse(o.toString('utf8', 0, w))
 					if(ch.data && d && d.length) {
-						for(var j = 0;j<d.length;j++) ch.data(d[j])
+						for(var j = 0;j<d.length;j++) {
+							ch.data(d[j]);
+						}
 					}
 					e = 1;
 					w = 0;
@@ -138,7 +154,9 @@ define(function(require, exports, module){
 					w = c = 0
 					e = l
 					if(l > max) { return err("buffer size request too large "+l+" > "+max); }
-					if(l > o.length) o = new Buffer(l)
+					if(l > o.length) {
+						o = new Buffer(l);
+					}
 					return s = data;
 				}
 
@@ -222,12 +240,12 @@ define(function(require, exports, module){
 				ws.on('data', function(d){
 					i = d
 					r = 0
-					while(s());
+					while(s()) {};
 				})
 
 				var cw = ws
 				ws.on('close', function(){
-					if(cw == ws) wsClose()
+					if(cw == ws) { wsClose() }
 					o = null
 				})
 
@@ -263,12 +281,18 @@ define(function(require, exports, module){
 
 			ch.send = function(m){
 				sd.push(JSON.stringify(m))
-				if(!st) st = setTimeout(function(){
-					st = 0
-					if(ws) wsWrite('['+sd.join(',')+']'), sd.length = 0
-					else
-					if(pr) endPoll(200, '['+sd.join(',')+']'), sd.length = 0
-				}, 0)
+				if(!st) {
+					st = setTimeout(function(){
+						st = 0
+						if(ws) {
+							wsWrite('['+sd.join(',')+']');
+							sd.length = 0;
+						} else if(pr) {
+							endPoll(200, '['+sd.join(',')+']');
+							sd.length = 0;
+						}
+					}, 0);
+				}
 			}
 
 			return ch;
@@ -300,7 +324,7 @@ define(function(require, exports, module){
 			sx.onreadystatechange = function(){
 				if(sx.readyState != 4) { return; }
 				sx = 0
-				if(sd.length > 0) xsend()
+				if(sd.length > 0) { xsend(); }
 			}
 			sx.open('POST', url)
 			sx.send(d)
@@ -316,7 +340,9 @@ define(function(require, exports, module){
 				}
 				return;
 			} else if (!ws){
-				if(!ws) console.log('Websocket flooded, trace data lost')
+				if(!ws) {
+					console.log('Websocket flooded, trace data lost')
+				}
 			}
 			if(sd.length){
 				var data = '[' + sd.join(',') + ']'
@@ -324,12 +350,20 @@ define(function(require, exports, module){
 				if(bs.length || ws.bufferedAmount > 500000){
 					bs.push(data)
 					if(!bi) bi = setInterval(function(){
-						if(ws && ws.bufferedAmount < 500000)
+						if(ws && ws.bufferedAmount < 500000) {
 							ws.send(bs.shift())
-						if(!ws || !bs.length) clearInterval(bi), bi = 0
-						if(!ws) console.log('Websocket flooded, trace data lost')
+						}
+						if(!ws || !bs.length) {
+							clearInterval(bi);
+							bi = 0;
+						}
+						if(!ws) {
+							console.log('Websocket flooded, trace data lost');
+						}
 					}, 10)
-				} else ws.send(data)
+				} else {
+					ws.send(data);
+				}
 			}
 		}
 
@@ -337,11 +371,15 @@ define(function(require, exports, module){
 		ch.send = function(m){
 			sd.push(JSON.stringify(m))
 			if(ws){
-				if(sd.length>10000) wsFlush()
-				if(!wt) wt = setTimeout(function(){
-					wt = 0
-					wsFlush()
-				},0)
+				if(sd.length>10000) {
+					wsFlush();
+				}
+				if(!wt){
+					wt = setTimeout(function(){
+						wt = 0
+						wsFlush()
+					},0)
+				}
 			} else {
 				if(!sx) { return xsend(); }
 			}
@@ -351,10 +389,17 @@ define(function(require, exports, module){
 			var x = new XMLHttpRequest()
 			x.onreadystatechange = function(){
 				if(x.readyState != 4) { return }
-				if(x.status == 200 || x.status == 304) poll()
-				else setTimeout(poll, 500)
+				if(x.status == 200 || x.status == 304) {
+					poll()
+				}	else {
+					setTimeout(poll, 500);
+				}
 				try{ var d = JSON.parse(x.responseText) }catch(e){}
-				if(d && ch.data && d.length) for(var i = 0;i<d.length;i++) ch.data(d[i])
+				if(d && ch.data && d.length) {
+					for(var i = 0;i<d.length;i++) {
+						ch.data(d[i]);
+					}
+				}
 			}
 			x.open('GET', url)
 			x.send()
@@ -365,8 +410,12 @@ define(function(require, exports, module){
 			x.onreadystatechange = function(){
 				if(x.readyState != 4) { return; }
 				var d
-				if(x.status == 200 ) try{d = JSON.parse(x.responseText) }catch(e){}
-				if(cb) cb(d)
+				if(x.status == 200 ) {
+					try{d = JSON.parse(x.responseText) }catch(e){}
+				}
+				if(cb) {
+					cb(d);
+				}
 			}
 			x.open('PUT', url)
 			x.send(JSON.stringify(m))
@@ -392,12 +441,19 @@ define(function(require, exports, module){
 			}
 			w.onmessage = function(e){
 				var d = parse(e.data)
-				if(d && ch.data) for(var i = 0;i<d.length;i++) ch.data(d[i])
+				if(d && ch.data) {
+					for(var i = 0;i<d.length;i++) {
+						ch.data(d[i]);
+					}
+				}
 			}
 		}
 
-		if(typeof no_websockets !== "undefined" || typeof WebSocket === "undefined") poll()
-		else websock()
+		if(typeof no_websockets !== "undefined" || typeof WebSocket === "undefined") {
+			poll();
+		} else {
+			websock();
+		}
 		//poll()
 		return ch;
 	}
